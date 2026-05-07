@@ -70,6 +70,9 @@
       vertical-align: middle;
     }
 
+    .item.pending { opacity: 0.45; }
+    .item.pending .item-text { text-decoration: line-through; }
+
     .tab-add {
       flex-shrink: 0;
       padding: 10px 16px 12px;
@@ -415,10 +418,8 @@ function toggle(lid, iid) {
 
   if (item.checked) {
     commitPending(); // commit any previous pending
-    item.checked = false;
     const ts = new Date().toISOString();
-    save();
-    render();
+    render(); // show pending visual (item stays in place, checked=true)
     showToast(item.text, lid, iid, ts);
   } else {
     item.checked = true;
@@ -433,7 +434,7 @@ function commitPending() {
   clearTimeout(pending.timer);
   pending.el.remove();
   const item = s.items[pending.lid]?.find(i => i.id === pending.iid);
-  if (item && !item.checked) { item.uncheckHistory.push(pending.ts); save(); }
+  if (item && item.checked) { item.checked = false; item.uncheckHistory.push(pending.ts); save(); render(); }
   pending = null;
 }
 
@@ -453,15 +454,14 @@ function showToast(text, lid, iid, ts) {
   const commit = () => {
     el.remove();
     const item = s.items[lid]?.find(i => i.id === iid);
-    if (item && !item.checked) { item.uncheckHistory.push(ts); save(); render(); }
+    if (item && item.checked) { item.checked = false; item.uncheckHistory.push(ts); save(); render(); }
     pending = null;
   };
   const undo = () => {
     clearTimeout(pending?.timer);
     el.remove();
-    const item = s.items[lid]?.find(i => i.id === iid);
-    if (item) { item.checked = true; save(); render(); }
     pending = null;
+    render(); // item already checked=true, just remove pending visual
   };
 
   el.querySelector('.toast-undo').addEventListener('click', e => { e.stopPropagation(); undo(); });
@@ -610,7 +610,7 @@ function itemHtml(item) {
   const last = c ? fmtDate(item.uncheckHistory.at(-1)) : null;
   const meta = c ? `最終: ${last}　計${c}回` : '';
   return (
-    `<div class="item${item.checked ? ' checked' : ''}" data-iid="${item.id}">` +
+    `<div class="item${item.checked ? ' checked' : ''}${pending?.iid === item.id ? ' pending' : ''}" data-iid="${item.id}">` +
       `<div class="item-icon">${item.checked ? '✓' : '○'}</div>` +
       `<div class="item-body">` +
         `<div class="item-text">${esc(item.text)}</div>` +
