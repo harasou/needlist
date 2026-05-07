@@ -71,7 +71,7 @@
     }
 
     .item.pending { opacity: 0.45; }
-    .item.pending .item-text { text-decoration: line-through; }
+    .item.checked.pending .item-text { text-decoration: line-through; }
 
     .tab-add {
       flex-shrink: 0;
@@ -416,16 +416,13 @@ function toggle(lid, iid) {
   const item = s.items[lid]?.find(i => i.id === iid);
   if (!item) return;
 
-  if (item.checked) {
-    commitPending(); // commit any previous pending
-    const ts = new Date().toISOString();
-    render(); // show pending visual (item stays in place, checked=true)
-    showToast(item.text, lid, iid, ts);
-  } else {
-    item.checked = true;
-    save();
-    render();
+  if (pending?.lid === lid && pending?.iid === iid) {
+    clearTimeout(pending.timer); pending.el.remove(); pending = null; render(); return;
   }
+  commitPending();
+  const wasChecked = item.checked;
+  render();
+  showToast(item.text, lid, iid, new Date().toISOString(), wasChecked);
 }
 
 // ── Toast ────────────────────────────────────────────────
@@ -433,41 +430,50 @@ function commitPending() {
   if (!pending) return;
   clearTimeout(pending.timer);
   pending.el.remove();
-  const item = s.items[pending.lid]?.find(i => i.id === pending.iid);
-  if (item && item.checked) { item.checked = false; item.uncheckHistory.push(pending.ts); save(); render(); }
-  pending = null;
+  const p = pending;
+  pending = null; // clear BEFORE render
+  const item = s.items[p.lid]?.find(i => i.id === p.iid);
+  if (item) {
+    if (p.wasChecked) { item.checked = false; item.uncheckHistory.push(p.ts); }
+    else              { item.checked = true; }
+    save(); render();
+  }
 }
 
-function showToast(text, lid, iid, ts) {
-  // Remove existing toast immediately
+function showToast(text, lid, iid, ts, wasChecked) {
   document.querySelector('.toast')?.remove();
   if (pending) { clearTimeout(pending.timer); pending = null; }
 
   const el = document.createElement('div');
   el.className = 'toast';
+  const msg = wasChecked ? `「${esc(text)}」を購入済みに` : `「${esc(text)}」を要購入に追加`;
   el.innerHTML =
-    `<span class="toast-text">「${esc(text)}」を購入済みに</span>` +
+    `<span class="toast-text">${msg}</span>` +
     `<button class="toast-undo">取り消し</button>` +
     `<div class="toast-bar"></div>`;
   document.body.appendChild(el);
 
   const commit = () => {
     el.remove();
-    const item = s.items[lid]?.find(i => i.id === iid);
-    if (item && item.checked) { item.checked = false; item.uncheckHistory.push(ts); save(); render(); }
     pending = null;
+    const item = s.items[lid]?.find(i => i.id === iid);
+    if (item) {
+      if (wasChecked) { item.checked = false; item.uncheckHistory.push(ts); }
+      else            { item.checked = true; }
+      save(); render();
+    }
   };
   const undo = () => {
     clearTimeout(pending?.timer);
     el.remove();
     pending = null;
-    render(); // item already checked=true, just remove pending visual
+    render();
   };
 
   el.querySelector('.toast-undo').addEventListener('click', e => { e.stopPropagation(); undo(); });
 
   const timer = setTimeout(commit, 5000);
-  pending = { timer, lid, iid, ts, el };
+  pending = { timer, lid, iid, ts, el, wasChecked };
 }
 
 // ── Modal ────────────────────────────────────────────────
