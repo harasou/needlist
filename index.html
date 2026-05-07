@@ -509,21 +509,26 @@ function renderTabs() {
 
   tabs.querySelectorAll('.tab[data-lid]').forEach(t => {
     let pressTimer = null;
+    let startX = 0, startY = 0;
 
-    // preventDefault stops iOS from firing touchcancel before our timer fires
-    t.addEventListener('touchstart', e => {
+    t.addEventListener('pointerdown', e => {
+      if (e.button > 0) return;
       e.preventDefault();
+      t.setPointerCapture(e.pointerId);
+      startX = e.clientX; startY = e.clientY;
       pressTimer = setTimeout(() => { pressTimer = null; openListModal(t.dataset.lid); }, 600);
-    }, { passive: false });
-    t.addEventListener('touchend', () => {
+    });
+    t.addEventListener('pointerup', () => {
       if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; s.active = t.dataset.lid; render(); }
     });
-    t.addEventListener('touchmove',   () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
-    t.addEventListener('touchcancel', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
-
-    // desktop
-    t.addEventListener('click',    () => { s.active = t.dataset.lid; render(); });
-    t.addEventListener('dblclick', () => openListModal(t.dataset.lid));
+    t.addEventListener('pointermove', e => {
+      if (!pressTimer) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if (dx*dx + dy*dy > 100) { clearTimeout(pressTimer); pressTimer = null; }
+    });
+    t.addEventListener('pointercancel', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+    t.addEventListener('contextmenu',   e => e.preventDefault());
+    t.addEventListener('dblclick',      () => openListModal(t.dataset.lid));
   });
   tabs.querySelector('#btn-new').addEventListener('click', () => {
     modal({
@@ -646,7 +651,9 @@ document.getElementById('add-form').addEventListener('submit', e => {
   save(); render();
   inp.value = '';
   inp.focus();
-  document.querySelector(`[data-iid="${newId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  requestAnimationFrame(() => {
+    document.querySelector(`[data-iid="${newId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 });
 
 // ── Init ─────────────────────────────────────────────────
