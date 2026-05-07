@@ -526,9 +526,10 @@ function renderTabs() {
       const dx = e.clientX - startX, dy = e.clientY - startY;
       if (dx*dx + dy*dy > 100) { clearTimeout(pressTimer); pressTimer = null; }
     });
-    t.addEventListener('pointercancel', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
-    t.addEventListener('contextmenu',   e => e.preventDefault());
-    t.addEventListener('dblclick',      () => openListModal(t.dataset.lid));
+    // pointercancel intentionally not handled: on Android, contextmenu fires ~500ms
+    // and triggers pointercancel — ignoring it lets the 600ms timer complete
+    t.addEventListener('contextmenu', e => e.preventDefault());
+    t.addEventListener('dblclick',    () => openListModal(t.dataset.lid));
   });
   tabs.querySelector('#btn-new').addEventListener('click', () => {
     modal({
@@ -652,7 +653,14 @@ document.getElementById('add-form').addEventListener('submit', e => {
   inp.value = '';
   inp.focus();
   requestAnimationFrame(() => {
-    document.querySelector(`[data-iid="${newId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const el = document.querySelector(`[data-iid="${newId}"]`);
+    const main = document.getElementById('main');
+    if (!el || !main) return;
+    const elRect = el.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    if (elRect.bottom > mainRect.bottom) {
+      main.scrollTop += elRect.bottom - mainRect.bottom + 16;
+    }
   });
 });
 
