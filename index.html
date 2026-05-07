@@ -71,7 +71,7 @@
     }
 
     .item.pending { opacity: 0.45; }
-    .item.pending:not(.checked) .item-text { text-decoration: line-through; }
+    .item.pending-uncheck .item-text { text-decoration: line-through; }
 
     .tab-add {
       flex-shrink: 0;
@@ -618,7 +618,7 @@ function itemHtml(item) {
   const last = c ? fmtDate(item.uncheckHistory.at(-1)) : null;
   const meta = c ? `最終: ${last}　計${c}回` : '';
   return (
-    `<div class="item${visualChecked ? ' checked' : ''}${isPending ? ' pending' : ''}" data-iid="${item.id}">` +
+    `<div class="item${visualChecked ? ' checked' : ''}${isPending ? ' pending' : ''}${isPending && item.checked ? ' pending-uncheck' : ''}" data-iid="${item.id}">` +
       `<div class="item-icon">${visualChecked ? '✓' : '○'}</div>` +
       `<div class="item-body">` +
         `<div class="item-text">${esc(item.text)}</div>` +
