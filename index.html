@@ -58,6 +58,7 @@
       transition: color .15s, border-color .15s;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
     }
     .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
@@ -508,18 +509,18 @@ function renderTabs() {
 
   tabs.querySelectorAll('.tab[data-lid]').forEach(t => {
     let pressTimer = null;
-    let longPressed = false;
 
     t.addEventListener('touchstart', () => {
-      pressTimer = setTimeout(() => { pressTimer = null; longPressed = true; openListModal(t.dataset.lid); }, 600);
+      pressTimer = setTimeout(() => { pressTimer = null; openListModal(t.dataset.lid); }, 600);
     }, { passive: true });
-    t.addEventListener('touchend',  () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
-    t.addEventListener('touchmove', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
-
-    t.addEventListener('click', () => {
-      if (longPressed) { longPressed = false; return; }
-      s.active = t.dataset.lid; render();
+    t.addEventListener('touchend', e => {
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+      else e.preventDefault(); // long press fired: suppress the subsequent click
     });
+    t.addEventListener('touchmove',   () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+    t.addEventListener('touchcancel', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+
+    t.addEventListener('click',   () => { s.active = t.dataset.lid; render(); });
     t.addEventListener('dblclick', () => openListModal(t.dataset.lid));
   });
   tabs.querySelector('#btn-new').addEventListener('click', () => {
