@@ -421,8 +421,8 @@ function toggle(lid, iid) {
   }
   commitPending();
   const wasChecked = item.checked;
-  render();
   showToast(item.text, lid, iid, new Date().toISOString(), wasChecked);
+  render(); // render after showToast so pending is set when itemHtml runs
 }
 
 // ── Toast ────────────────────────────────────────────────
