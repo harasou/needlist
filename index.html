@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>チェックリスト</title>
+  <title>needlist</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -392,17 +392,12 @@ function uid()  { return crypto.randomUUID?.() ?? Math.random().toString(36).sli
 
 // ── Sort ─────────────────────────────────────────────────
 function sorted(items) {
-  return [...items].sort((a, b) => {
-    // 1. checked first
-    if (a.checked !== b.checked) return a.checked ? -1 : 1;
-    // 2. more purchases first
-    const ac = a.uncheckHistory.length, bc = b.uncheckHistory.length;
-    if (ac !== bc) return bc - ac;
-    // 3. older last purchase first
-    const al = a.uncheckHistory.at(-1) ?? '';
-    const bl = b.uncheckHistory.at(-1) ?? '';
-    return al < bl ? -1 : al > bl ? 1 : 0;
-  });
+  return items.map((item, i) => ({ item, i }))
+    .sort((a, b) => {
+      if (a.item.checked !== b.item.checked) return a.item.checked ? -1 : 1;
+      return a.i - b.i;
+    })
+    .map(({ item }) => item);
 }
 
 // ── Toggle ───────────────────────────────────────────────
@@ -631,10 +626,12 @@ document.getElementById('add-form').addEventListener('submit', e => {
   const inp = document.getElementById('add-input');
   const text = inp.value.trim();
   if (!text || !s.active) return;
-  s.items[s.active].push({ id: uid(), text, checked: false, uncheckHistory: [] });
+  const newId = uid();
+  s.items[s.active].push({ id: newId, text, checked: true, uncheckHistory: [] });
   save(); render();
   inp.value = '';
   inp.focus();
+  document.querySelector(`[data-iid="${newId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 });
 
 // ── Init ─────────────────────────────────────────────────
