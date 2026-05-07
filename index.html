@@ -507,7 +507,19 @@ function renderTabs() {
     `<div class="tab-add" id="btn-new">＋</div>`;
 
   tabs.querySelectorAll('.tab[data-lid]').forEach(t => {
-    t.addEventListener('click', () => { s.active = t.dataset.lid; render(); });
+    let pressTimer = null;
+    let longPressed = false;
+
+    t.addEventListener('touchstart', () => {
+      pressTimer = setTimeout(() => { pressTimer = null; longPressed = true; openListModal(t.dataset.lid); }, 600);
+    }, { passive: true });
+    t.addEventListener('touchend',  () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+    t.addEventListener('touchmove', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+
+    t.addEventListener('click', () => {
+      if (longPressed) { longPressed = false; return; }
+      s.active = t.dataset.lid; render();
+    });
     t.addEventListener('dblclick', () => openListModal(t.dataset.lid));
   });
   tabs.querySelector('#btn-new').addEventListener('click', () => {
@@ -558,7 +570,7 @@ function renderMain() {
   let html = '';
   if (checked.length)   html += section('要購入', checked);
   if (unchecked.length) html += section('ストック', unchecked);
-  html += `<div class="hint">タブをダブルタップでリスト名の編集・削除</div>`;
+  html += `<div class="hint">タブを長押しでリスト名の編集・削除</div>`;
   main.innerHTML = html;
 
   // Events
