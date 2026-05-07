@@ -510,17 +510,19 @@ function renderTabs() {
   tabs.querySelectorAll('.tab[data-lid]').forEach(t => {
     let pressTimer = null;
 
-    t.addEventListener('touchstart', () => {
+    // preventDefault stops iOS from firing touchcancel before our timer fires
+    t.addEventListener('touchstart', e => {
+      e.preventDefault();
       pressTimer = setTimeout(() => { pressTimer = null; openListModal(t.dataset.lid); }, 600);
-    }, { passive: true });
-    t.addEventListener('touchend', e => {
-      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-      else e.preventDefault(); // long press fired: suppress the subsequent click
+    }, { passive: false });
+    t.addEventListener('touchend', () => {
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; s.active = t.dataset.lid; render(); }
     });
     t.addEventListener('touchmove',   () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
     t.addEventListener('touchcancel', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
 
-    t.addEventListener('click',   () => { s.active = t.dataset.lid; render(); });
+    // desktop
+    t.addEventListener('click',    () => { s.active = t.dataset.lid; render(); });
     t.addEventListener('dblclick', () => openListModal(t.dataset.lid));
   });
   tabs.querySelector('#btn-new').addEventListener('click', () => {
