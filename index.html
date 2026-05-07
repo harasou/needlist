@@ -63,6 +63,13 @@
     }
     .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 
+    .tab-edit {
+      font-size: 11px;
+      margin-left: 4px;
+      opacity: 0.6;
+      vertical-align: middle;
+    }
+
     .tab-add {
       flex-shrink: 0;
       padding: 10px 16px 12px;
@@ -503,33 +510,18 @@ function renderTabs() {
   const tabs = document.getElementById('tabs');
   tabs.innerHTML =
     s.lists.map(l =>
-      `<div class="tab${l.id === s.active ? ' active' : ''}" data-lid="${l.id}">${esc(l.name)}</div>`
+      `<div class="tab${l.id === s.active ? ' active' : ''}" data-lid="${l.id}">` +
+        esc(l.name) +
+        (l.id === s.active ? `<span class="tab-edit">✎</span>` : '') +
+      `</div>`
     ).join('') +
     `<div class="tab-add" id="btn-new">＋</div>`;
 
   tabs.querySelectorAll('.tab[data-lid]').forEach(t => {
-    let pressTimer = null;
-    let startX = 0, startY = 0;
-
-    t.addEventListener('pointerdown', e => {
-      if (e.button > 0) return;
-      e.preventDefault();
-      t.setPointerCapture(e.pointerId);
-      startX = e.clientX; startY = e.clientY;
-      pressTimer = setTimeout(() => { pressTimer = null; openListModal(t.dataset.lid); }, 600);
+    t.addEventListener('click', e => {
+      if (e.target.closest('.tab-edit')) { openListModal(t.dataset.lid); return; }
+      s.active = t.dataset.lid; render();
     });
-    t.addEventListener('pointerup', () => {
-      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; s.active = t.dataset.lid; render(); }
-    });
-    t.addEventListener('pointermove', e => {
-      if (!pressTimer) return;
-      const dx = e.clientX - startX, dy = e.clientY - startY;
-      if (dx*dx + dy*dy > 100) { clearTimeout(pressTimer); pressTimer = null; }
-    });
-    // pointercancel intentionally not handled: on Android, contextmenu fires ~500ms
-    // and triggers pointercancel — ignoring it lets the 600ms timer complete
-    t.addEventListener('contextmenu', e => e.preventDefault());
-    t.addEventListener('dblclick',    () => openListModal(t.dataset.lid));
   });
   tabs.querySelector('#btn-new').addEventListener('click', () => {
     modal({
@@ -579,7 +571,7 @@ function renderMain() {
   let html = '';
   if (checked.length)   html += section('要購入', checked);
   if (unchecked.length) html += section('ストック', unchecked);
-  html += `<div class="hint">タブを長押しでリスト名の編集・削除</div>`;
+  html += `<div class="hint">タブの ✎ でリスト名の編集・削除</div>`;
   main.innerHTML = html;
 
   // Events
