@@ -602,8 +602,8 @@ function renderMain() {
   }
 
   let html = '';
-  if (checked.length)   html += section('要購入', checked);
-  if (unchecked.length) html += section('ストック', unchecked);
+  if (checked.length)   html += section('NEED', checked);
+  if (unchecked.length) html += section('HAVE', unchecked);
   html += `<div class="hint">タブの ✎ でリスト名の編集・削除</div>`;
   main.innerHTML = html;
 
