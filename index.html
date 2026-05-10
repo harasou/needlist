@@ -406,7 +406,7 @@ function sorted(items) {
   return items.map((item, i) => ({ item, i }))
     .sort((a, b) => {
       if (a.item.checked !== b.item.checked) return a.item.checked ? -1 : 1;
-      return a.i - b.i;
+      return a.item.text.localeCompare(b.item.text, 'ja');
     })
     .map(({ item }) => item);
 }
