@@ -376,7 +376,7 @@
 <script>
 const KEY = 'cl_v2';
 let s = { lists: [], items: {}, active: null };
-let pending = null; // { timer, lid, iid, ts, el }
+let pending = null; // { timer, items:[{lid,iid,ts,wasChecked,text}], el }
 
 // ── Storage ──────────────────────────────────────────────
 function load() {
@@ -416,64 +416,91 @@ function toggle(lid, iid) {
   const item = s.items[lid]?.find(i => i.id === iid);
   if (!item) return;
 
-  if (pending?.lid === lid && pending?.iid === iid) {
-    clearTimeout(pending.timer); pending.el.remove(); pending = null; render(); return;
+  if (!pending) {
+    showToast([{ lid, iid, ts: new Date().toISOString(), wasChecked: item.checked, text: item.text }]);
+    render();
+    return;
   }
-  commitPending();
-  const wasChecked = item.checked;
-  showToast(item.text, lid, iid, new Date().toISOString(), wasChecked);
-  render(); // render after showToast so pending is set when itemHtml runs
+
+  clearTimeout(pending.timer);
+  const idx = pending.items.findIndex(p => p.lid === lid && p.iid === iid);
+  if (idx !== -1) {
+    pending.items.splice(idx, 1);
+    if (pending.items.length === 0) {
+      pending.el.remove();
+      pending = null;
+      render();
+      return;
+    }
+  } else {
+    pending.items.push({ lid, iid, ts: new Date().toISOString(), wasChecked: item.checked, text: item.text });
+  }
+  updateToastContent();
+  resetToastBar();
+  pending.timer = setTimeout(commitPending, 5000);
+  render();
 }
 
 // ── Toast ────────────────────────────────────────────────
-function commitPending() {
-  if (!pending) return;
-  clearTimeout(pending.timer);
-  pending.el.remove();
-  const p = pending;
-  pending = null; // clear BEFORE render
-  const item = s.items[p.lid]?.find(i => i.id === p.iid);
-  if (item) {
-    if (p.wasChecked) { item.checked = false; item.uncheckHistory.push(p.ts); }
-    else              { item.checked = true; }
-    save(); render();
+function toastMsg(items) {
+  if (items.length === 1) {
+    const p = items[0];
+    return p.wasChecked ? `「${esc(p.text)}」を購入済みに` : `「${esc(p.text)}」を要購入に追加`;
   }
+  return `${items.length}件を変更`;
 }
 
-function showToast(text, lid, iid, ts, wasChecked) {
-  document.querySelector('.toast')?.remove();
-  if (pending) { clearTimeout(pending.timer); pending = null; }
+function updateToastContent() {
+  if (!pending) return;
+  const el = pending.el.querySelector('.toast-text');
+  if (el) el.innerHTML = toastMsg(pending.items);
+}
 
-  const el = document.createElement('div');
-  el.className = 'toast';
-  const msg = wasChecked ? `「${esc(text)}」を購入済みに` : `「${esc(text)}」を要購入に追加`;
-  el.innerHTML =
-    `<span class="toast-text">${msg}</span>` +
-    `<button class="toast-undo">取り消し</button>` +
-    `<div class="toast-bar"></div>`;
-  document.body.appendChild(el);
+function resetToastBar() {
+  if (!pending) return;
+  const bar = pending.el.querySelector('.toast-bar');
+  if (!bar) return;
+  bar.style.animation = 'none';
+  bar.offsetHeight; // reflow to restart animation
+  bar.style.animation = 'shrink 5s linear forwards';
+}
 
-  const commit = () => {
-    el.remove();
-    pending = null;
+function commitPending() {
+  if (!pending) return;
+  pending.el.remove();
+  const p = pending;
+  pending = null;
+  p.items.forEach(({ lid, iid, ts, wasChecked }) => {
     const item = s.items[lid]?.find(i => i.id === iid);
     if (item) {
       if (wasChecked) { item.checked = false; item.uncheckHistory.push(ts); }
       else            { item.checked = true; }
-      save(); render();
     }
-  };
-  const undo = () => {
+  });
+  save(); render();
+}
+
+function showToast(items) {
+  document.querySelector('.toast')?.remove();
+
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML =
+    `<span class="toast-text">${toastMsg(items)}</span>` +
+    `<button class="toast-undo">取り消し</button>` +
+    `<div class="toast-bar"></div>`;
+  document.body.appendChild(el);
+
+  el.querySelector('.toast-undo').addEventListener('click', e => {
+    e.stopPropagation();
     clearTimeout(pending?.timer);
     el.remove();
     pending = null;
     render();
-  };
+  });
 
-  el.querySelector('.toast-undo').addEventListener('click', e => { e.stopPropagation(); undo(); });
-
-  const timer = setTimeout(commit, 5000);
-  pending = { timer, lid, iid, ts, el, wasChecked };
+  const timer = setTimeout(commitPending, 5000);
+  pending = { timer, items, el };
 }
 
 // ── Modal ────────────────────────────────────────────────
@@ -612,13 +639,14 @@ function section(label, items) {
 }
 
 function itemHtml(item) {
-  const isPending = pending?.iid === item.id;
+  const pendingEntry = pending?.items.find(p => p.iid === item.id);
+  const isPending = !!pendingEntry;
   const visualChecked = isPending ? !item.checked : item.checked;
   const c    = item.uncheckHistory.length;
   const last = c ? fmtDate(item.uncheckHistory.at(-1)) : null;
   const meta = c ? `最終: ${last}　計${c}回` : '';
   return (
-    `<div class="item${visualChecked ? ' checked' : ''}${isPending ? ' pending' : ''}${isPending && item.checked ? ' pending-uncheck' : ''}" data-iid="${item.id}">` +
+    `<div class="item${visualChecked ? ' checked' : ''}${isPending ? ' pending' : ''}${isPending && pendingEntry.wasChecked ? ' pending-uncheck' : ''}" data-iid="${item.id}">` +
       `<div class="item-icon">${visualChecked ? '✓' : '○'}</div>` +
       `<div class="item-body">` +
         `<div class="item-text">${esc(item.text)}</div>` +
