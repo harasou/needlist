@@ -590,8 +590,8 @@ function openListModal(lid) {
       if (s.active === lid) s.active = s.lists[0]?.id ?? null;
       save(); render();
     } : null,
-    onMoveLeft:  idx > 0                    ? () => { s.lists.splice(idx, 1); s.lists.splice(idx - 1, 0, list); save(); render(); } : null,
-    onMoveRight: idx < s.lists.length - 1   ? () => { s.lists.splice(idx, 1); s.lists.splice(idx + 1, 0, list); save(); render(); } : null,
+    onMoveLeft:  idx > 0                  ? () => { s.lists.splice(idx, 1); s.lists.splice(idx - 1, 0, list); save(); render(); openListModal(lid); } : null,
+    onMoveRight: idx < s.lists.length - 1 ? () => { s.lists.splice(idx, 1); s.lists.splice(idx + 1, 0, list); save(); render(); openListModal(lid); } : null,
   });
 }
 
