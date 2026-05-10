@@ -272,7 +272,7 @@
       height: 3px;
       background: #64d2ff;
       border-radius: 0 0 14px 14px;
-      animation: shrink 3s linear forwards;
+      animation: shrink var(--undo-s, 3s) linear forwards;
     }
     @keyframes shrink { from { width: 100%; } to { width: 0%; } }
 
@@ -376,6 +376,7 @@
 
 <script>
 const KEY = 'cl_v2';
+const UNDO_MS = 3000;
 let s = { lists: [], items: {}, active: null };
 let pending = null; // { timer, items:[{lid,iid,ts,wasChecked,text}], el }
 
@@ -438,7 +439,7 @@ function toggle(lid, iid) {
   }
   updateToastContent();
   resetToastBar();
-  pending.timer = setTimeout(commitPending, 3000);
+  pending.timer = setTimeout(commitPending, UNDO_MS);
   render();
 }
 
@@ -463,7 +464,7 @@ function resetToastBar() {
   if (!bar) return;
   bar.style.animation = 'none';
   bar.offsetHeight; // reflow to restart animation
-  bar.style.animation = 'shrink 3s linear forwards';
+  bar.style.animation = `shrink ${UNDO_MS / 1000}s linear forwards`;
 }
 
 function commitPending() {
@@ -486,6 +487,7 @@ function showToast(items) {
 
   const el = document.createElement('div');
   el.className = 'toast';
+  el.style.setProperty('--undo-s', `${UNDO_MS / 1000}s`);
   el.innerHTML =
     `<span class="toast-text">${toastMsg(items)}</span>` +
     `<button class="toast-undo">取り消し</button>` +
@@ -500,7 +502,7 @@ function showToast(items) {
     render();
   });
 
-  const timer = setTimeout(commitPending, 3000);
+  const timer = setTimeout(commitPending, UNDO_MS);
   pending = { timer, items, el };
 }
 
