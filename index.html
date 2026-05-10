@@ -49,8 +49,8 @@
 
     .tab {
       flex-shrink: 0;
-      padding: 12px 16px;
-      font-size: 14px;
+      padding: 16px 20px;
+      font-size: 15px;
       font-weight: 500;
       color: var(--muted);
       cursor: pointer;
@@ -349,6 +349,7 @@
     .btn-primary { background: var(--blue); color: #fff; }
     .btn-cancel  { background: var(--bg); color: var(--text); }
     .btn-danger  { background: transparent; color: var(--red); padding-left: 0; }
+    .btn-move    { background: var(--bg); color: var(--text); padding: 11px 14px; }
 
     .hint {
       text-align: center;
@@ -504,7 +505,7 @@ function showToast(items) {
 }
 
 // ── Modal ────────────────────────────────────────────────
-function modal({ title, value = '', placeholder = '', onSave, onDelete }) {
+function modal({ title, value = '', placeholder = '', onSave, onDelete, onMoveLeft, onMoveRight }) {
   const ov = document.createElement('div');
   ov.className = 'overlay';
   ov.innerHTML =
@@ -512,7 +513,9 @@ function modal({ title, value = '', placeholder = '', onSave, onDelete }) {
       `<div class="modal-title">${esc(title)}</div>` +
       `<input class="modal-input" type="text" value="${esc(value)}" placeholder="${esc(placeholder)}">` +
       `<div class="modal-actions">` +
-        (onDelete ? `<button class="btn btn-danger" id="_del">削除</button>` : '') +
+        (onDelete    ? `<button class="btn btn-danger" id="_del">削除</button>` : '') +
+        (onMoveLeft  ? `<button class="btn btn-move"   id="_left">←</button>`  : '') +
+        (onMoveRight ? `<button class="btn btn-move"   id="_right">→</button>` : '') +
         `<div class="modal-spacer"></div>` +
         `<button class="btn btn-cancel" id="_cancel">キャンセル</button>` +
         `<button class="btn btn-primary" id="_save">保存</button>` +
@@ -525,7 +528,9 @@ function modal({ title, value = '', placeholder = '', onSave, onDelete }) {
 
   ov.querySelector('#_cancel').onclick = close;
   ov.querySelector('#_save').onclick = doSave;
-  ov.querySelector('#_del')?.addEventListener('click', () => { onDelete(); close(); });
+  ov.querySelector('#_del')?.addEventListener('click',   () => { onDelete();    close(); });
+  ov.querySelector('#_left')?.addEventListener('click',  () => { close(); onMoveLeft();  });
+  ov.querySelector('#_right')?.addEventListener('click', () => { close(); onMoveRight(); });
   ov.addEventListener('click', e => { if (e.target === ov) close(); });
   inp.addEventListener('keydown', e => {
     if (e.key === 'Enter') doSave();
@@ -574,6 +579,7 @@ function renderTabs() {
 function openListModal(lid) {
   const list = s.lists.find(l => l.id === lid);
   if (!list) return;
+  const idx = s.lists.indexOf(list);
   modal({
     title: 'リストを編集',
     value: list.name,
@@ -583,7 +589,9 @@ function openListModal(lid) {
       delete s.items[lid];
       if (s.active === lid) s.active = s.lists[0]?.id ?? null;
       save(); render();
-    } : null
+    } : null,
+    onMoveLeft:  idx > 0                    ? () => { s.lists.splice(idx, 1); s.lists.splice(idx - 1, 0, list); save(); render(); } : null,
+    onMoveRight: idx < s.lists.length - 1   ? () => { s.lists.splice(idx, 1); s.lists.splice(idx + 1, 0, list); save(); render(); } : null,
   });
 }
 
